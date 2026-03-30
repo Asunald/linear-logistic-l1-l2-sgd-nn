@@ -61,13 +61,11 @@ class ReLU(Layer):
 class SigmoidLayer(Layer):
     def forward(self, input):
         self.input = input
-        # numeric stability
         x = np.clip(input, -500, 500)
         self.output = 1.0 / (1.0 + np.exp(-x))
         return self.output
 
     def backward(self, grad_output):
-        # d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
         return grad_output * (self.output * (1.0 - self.output))
 
 
@@ -87,7 +85,6 @@ class LeakyReLULayer(Layer):
 class GeLULayer(Layer):
     def forward(self, input):
         self.input = input
-        # Approximate GeLU with tanh (common in student implementations)
         c = np.sqrt(2.0 / np.pi)
         self._inner = c * (input + 0.044715 * (input ** 3))
         self._tanh = np.tanh(self._inner)
@@ -95,13 +92,9 @@ class GeLULayer(Layer):
         return output
 
     def backward(self, grad_output):
-        # Derivative of approx GeLU:
-        # y = 0.5*x*(1+tanh(s))
-        # dy/dx = 0.5*(1+tanh(s)) + 0.5*x*(1-tanh(s)^2)*ds/dx
         c = np.sqrt(2.0 / np.pi)
         x = self.input
         tanh_s = self._tanh
-        # s = c*(x + 0.044715*x^3), so ds/dx = c*(1 + 3*0.044715*x^2)
         ds_dx = c * (1.0 + 3.0 * 0.044715 * (x ** 2))
         dy_dx = 0.5 * (1.0 + tanh_s) + 0.5 * x * (1.0 - tanh_s * tanh_s) * ds_dx
         return grad_output * dy_dx
@@ -111,7 +104,6 @@ class Dense(Layer):
     def __init__(self, input_units, output_units, learning_rate=0.1):
         self.learning_rate = learning_rate
 
-        # He initialization: variance proportional to 2/input_units
         self.weights = np.random.randn(input_units, output_units) * np.sqrt(
             2.0 / input_units
         )
@@ -122,16 +114,12 @@ class Dense(Layer):
         return np.dot(input, self.weights) + self.biases
 
     def backward(self, grad_output):
-        # Gradient of loss w.r.t. weights: input^T · grad_output
         grad_weights = np.dot(self.input.T, grad_output)
 
-        # Gradient of loss w.r.t. biases: sum grad_output over batch dimension
         grad_biases = np.sum(grad_output, axis=0)
 
-        # Gradient of loss w.r.t. input: grad_output · weights^T
         grad_input = np.dot(grad_output, self.weights.T)
 
-        # Update parameters using gradient descent
         self.weights = self.weights - self.learning_rate * grad_weights
         self.biases = self.biases - self.learning_rate * grad_biases
 
@@ -139,19 +127,15 @@ class Dense(Layer):
 
 
 def softmax_crossentropy_with_logits(logits, labels):
-    # Create one-hot vectors from labels
     batch_size = logits.shape[0]
     one_hot_labels = np.zeros_like(logits)
     one_hot_labels[np.arange(batch_size), labels] = 1
 
-    # Compute softmax (with numeric stability)
     exp_logits = np.exp(logits - np.max(logits, axis=1, keepdims=True))
     softmax_probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
 
-    # Compute cross-entropy loss
     loss = -np.sum(one_hot_labels * np.log(softmax_probs + 1e-9)) / batch_size
 
-    # Gradient of cross-entropy loss w.r.t. logits
     grad = (softmax_probs - one_hot_labels) / batch_size
 
     return loss, grad
@@ -174,24 +158,17 @@ def forward(network, X):
 
 
 def predict(network, X):
-    """Get predictions from the network"""
-    # Get the output of the last layer
     logits = forward(network, X)[-1]
-    # Return the class with highest score
     probs = softmax(logits)
     return np.argmax(probs, axis=-1)
 
 
 def train(network, X, y):
-    """Train the network on a batch of examples"""
-    # Forward pass
     activations = forward(network, X)
     logits = activations[-1]
 
-    # Compute loss and initial gradient
     loss, grad_logits = softmax_crossentropy_with_logits(logits, y)
 
-    # Backward pass (backpropagation)
     grad_output = grad_logits
     for i in range(len(network))[::-1]:  # Reversed order
         layer = network[i]
@@ -203,20 +180,14 @@ def train(network, X, y):
 def train_mnist_network(
     X_train, y_train, X_val, y_val, num_epochs=200
 ):
-    """Train a neural network on MNIST dataset using Gradient Descent (GD).
-    
-    Gradient Descent uses the entire dataset for each weight update,
-    computing the true gradient of the loss function.
-    """
-    # Initialize the network
     network = [
-        Dense(784, 64),  # Input layer -> Hidden layer 1
-        SigmoidLayer(),  # Activation function
-        Dense(64, 32),  # Hidden layer 1 -> Hidden layer 2
-        LeakyReLULayer(alpha=0.01),  # Activation function
-        Dense(32, 16),  # Hidden layer 2 -> Hidden layer 3
-        GeLULayer(),  # Activation function
-        Dense(16, 10),  # Output layer (logits for softmax)
+        Dense(784, 64),
+        SigmoidLayer(),
+        Dense(64, 32),
+        LeakyReLULayer(alpha=0.01),
+        Dense(32, 16),
+        GeLULayer(),
+        Dense(16, 10),
     ]
 
     print("Network architecture:")
@@ -232,15 +203,12 @@ def train_mnist_network(
         f"\nTraining on {len(X_train)} examples using Gradient Descent (full batch)"
     )
 
-    # Training loop - Gradient Descent uses the entire dataset
     for epoch in range(num_epochs):
-        # Train on the entire dataset (full batch Gradient Descent)
         loss = train(network, X_train, y_train)
 
         train_predictions = predict(network, X_train)
         train_accuracy = np.mean(train_predictions == y_train)
 
-        # Evaluate on validation set
         val_predictions = predict(network, X_val)
         val_accuracy = np.mean(val_predictions == y_val)
 

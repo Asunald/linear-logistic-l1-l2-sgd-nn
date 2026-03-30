@@ -8,7 +8,6 @@ from matplotlib.colors import ListedColormap
 
 
 def _sigmoid(x):
-    # Clip for numeric stability
     x = np.clip(x, -500, 500)
     return 1.0 / (1.0 + np.exp(-x))
 
@@ -51,7 +50,6 @@ class MyOwnLinearRegressionWithL1L2AndSGD:
         rng = np.random.default_rng(self.random_state)
         n_samples, n_features = X.shape
 
-        # init parameters (student-style: simple zeros)
         self.weights = np.zeros(n_features, dtype=float)
         self.bias = 0.0
 
@@ -69,11 +67,9 @@ class MyOwnLinearRegressionWithL1L2AndSGD:
                 error = y_pred - y_b
                 m = X_b.shape[0]
 
-                # MSE loss derivative (mean(error^2))
                 grad_w = (2.0 / m) * (X_b.T @ error)
                 grad_b = (2.0 / m) * np.sum(error)
 
-                # L1/L2 regularization on weights only (no bias)
                 grad_w += self._regularization_grad()
 
                 self.weights -= self.learning_rate * grad_w
@@ -176,12 +172,10 @@ def run_my_own_linear_regression():
     X = dataset.iloc[:, :-1].values.astype(float)
     y = dataset.iloc[:, -1].values.astype(float)
 
-    # Train/Test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=1 / 3, random_state=0
     )
 
-    # Feature scaling (helps SGD)
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
@@ -200,7 +194,6 @@ def run_my_own_linear_regression():
     mse = mean_squared_error(y_test, y_pred)
     print("Linear Regression MSE:", mse)
 
-    # Visualization
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
     ax = axes[0]
@@ -258,12 +251,10 @@ def run_my_own_logistic_regression():
     y_pred = model.predict(X_test)
     print("Logistic Regression Accuracy:", accuracy_score(y_test, y_pred))
 
-    # Visualization
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
     cmap = ListedColormap(("red", "green"))
     colors = ["red", "green"]
 
-    # LEFT: scaled features
     ax = axes[0]
     X_set, y_set = X_test, y_test
 
@@ -289,7 +280,6 @@ def run_my_own_logistic_regression():
     ax.set_ylabel("Estimated Salary (Standardized)")
     ax.legend()
 
-    # RIGHT: original features
     ax = axes[1]
     X_set, y_set = X_test_raw, y_test
 
