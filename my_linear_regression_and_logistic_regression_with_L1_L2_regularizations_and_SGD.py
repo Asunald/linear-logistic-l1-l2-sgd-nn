@@ -47,7 +47,7 @@ class MyOwnLinearRegressionWithL1L2AndSGD:
         return l1_grad + l2_grad
 
     def fit(self, X, y):
-        rng = np.random.default_rng(self.random_state)
+        np.random.seed(self.random_state)
         n_samples, n_features = X.shape
 
         self.weights = np.zeros(n_features, dtype=float)
@@ -56,18 +56,18 @@ class MyOwnLinearRegressionWithL1L2AndSGD:
         indices = np.arange(n_samples)
 
         for epoch in range(1, self.n_epochs + 1):
-            rng.shuffle(indices)
+            np.random.shuffle(indices)
 
             for start in range(0, n_samples, self.batch_size):
                 batch_idx = indices[start : start + self.batch_size]
                 X_b = X[batch_idx]
                 y_b = y[batch_idx]
 
-                y_pred = X_b @ self.weights + self.bias
+                y_pred = np.dot(X_b, self.weights) + self.bias
                 error = y_pred - y_b
                 m = X_b.shape[0]
 
-                grad_w = (2.0 / m) * (X_b.T @ error)
+                grad_w = (2.0 / m) * np.dot(X_b.T, error)
                 grad_b = (2.0 / m) * np.sum(error)
 
                 grad_w += self._regularization_grad()
@@ -76,13 +76,13 @@ class MyOwnLinearRegressionWithL1L2AndSGD:
                 self.bias -= self.learning_rate * grad_b
 
             if self.verbose_every and epoch % self.verbose_every == 0:
-                y_all_pred = X @ self.weights + self.bias
+                y_all_pred = np.dot(X, self.weights) + self.bias
                 mse = mean_squared_error(y, y_all_pred)
                 loss = mse + self._regularization_loss()
                 print(f"[Linear][Epoch {epoch}] loss={loss:.6f} mse={mse:.6f}")
 
     def predict(self, X):
-        return X @ self.weights + self.bias
+        return np.dot(X, self.weights) + self.bias
 
 
 class LogisticRegressionWithL1L2AndSGD:
@@ -120,7 +120,7 @@ class LogisticRegressionWithL1L2AndSGD:
         return l1_grad + l2_grad
 
     def fit(self, X, y):
-        rng = np.random.default_rng(self.random_state)
+        np.random.seed(self.random_state)
         n_samples, n_features = X.shape
 
         self.weights = np.zeros(n_features, dtype=float)
@@ -130,7 +130,7 @@ class LogisticRegressionWithL1L2AndSGD:
         eps = 1e-9
 
         for epoch in range(1, self.n_epochs + 1):
-            rng.shuffle(indices)
+            np.random.shuffle(indices)
 
             for start in range(0, n_samples, self.batch_size):
                 batch_idx = indices[start : start + self.batch_size]
@@ -138,28 +138,27 @@ class LogisticRegressionWithL1L2AndSGD:
                 y_b = y[batch_idx]
                 m = X_b.shape[0]
 
-                logits = X_b @ self.weights + self.bias
+                logits = np.dot(X_b, self.weights) + self.bias
                 y_pred = _sigmoid(logits)
 
-                # gradient of average BCE loss
-                error = y_pred - y_b  # shape: (m,)
-                grad_w = (1.0 / m) * (X_b.T @ error)
+                error = y_pred - y_b
+                grad_w = (1.0 / m) * np.dot(X_b.T, error)
                 grad_b = (1.0 / m) * np.sum(error)
 
-                grad_w += self._regularization_grad()  # weights only
+                grad_w += self._regularization_grad()
 
                 self.weights -= self.learning_rate * grad_w
                 self.bias -= self.learning_rate * grad_b
 
             if self.verbose_every and epoch % self.verbose_every == 0:
-                logits_all = X @ self.weights + self.bias
+                logits_all = np.dot(X, self.weights) + self.bias
                 y_pred_all = _sigmoid(logits_all)
                 bce = -np.mean(y * np.log(y_pred_all + eps) + (1 - y) * np.log(1 - y_pred_all + eps))
                 loss = bce + self._regularization_loss()
                 print(f"[Logistic][Epoch {epoch}] loss={loss:.6f} bce={bce:.6f}")
 
     def predict_proba(self, X):
-        logits = X @ self.weights + self.bias
+        logits = np.dot(X, self.weights) + self.bias
         return _sigmoid(logits)
 
     def predict(self, X):

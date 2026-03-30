@@ -170,7 +170,7 @@ def train(network, X, y):
     loss, grad_logits = softmax_crossentropy_with_logits(logits, y)
 
     grad_output = grad_logits
-    for i in range(len(network))[::-1]:  # Reversed order
+    for i in range(len(network))[::-1]:
         layer = network[i]
         grad_output = layer.backward(grad_output)
 
